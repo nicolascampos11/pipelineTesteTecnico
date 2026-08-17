@@ -1,0 +1,28 @@
+Anotações de decisões
+
+1. O arquivo 'cadastro de pessoas' 'planilha do Microsoft Excel' não possui correspondência com as outras bases, assim, usei a tabela homônima mas xslx;
+
+2. Usamos um StarSchema que liga na tabela fato contas_medicas.txt
+
+3. Tratei data de nascimento no formato brasileiro após verificar que o primeiro dígito por vezes é maior que 12, descartando a possibilidade de ser mm/dd/yy
+
+4. Idade sendo calculada com base no hoje, conforme especificação
+
+5. Datas com ano '1900' ou '9999' que são 'zeros' e 'infinitos' sendo tratados como 'sem informação' e na tabela como 'não informado' ao invés de descartar, para que o registgro da pessoa ainda seja contabilizado.;
+
+6. Datas que trariam o resultado de idade em negativo, ou > 120 também tratados como 'sem informação'
+
+7. Criei um script que usa a função set para identificar e separar os cnpjs distintos a fim de não duplicar documentos, o que traria um volume massivo de 7 milhões de registros a serem processados pela api de identificação de cep
+
+8. No script de enriquecimento, fizemos uma função de fallback pra certificar ou ao menos diminuir a chance de campos de endereço vazios; assim, antes de realizar o fallback, ele verifica se tem algum campo vazio para não fazer isso a toa
+
+9. Preferi por fazer um simples script de tratamento para os arquivos de operador e empresas para manter rastreabilidade, clareza de processo e padronização do pipeline
+
+10. Tratar casos de procedimento capitalizados junto aos lower() para o power BI não enxergar como procedimentos distintos
+
+11. Em dim_tempo, os valores representam meses
+
+12. Na coluna VALOR, existem números negativos (por exemplo, -246.814,75) e também na QTD. Isso não é erro de digitação nem sujeira — no contexto de sinistros de plano de saúde, valor negativo normalmente representa um estorno ou glosa: quando um procedimento é cancelado, corrigido, ou contestado depois de já ter sido lançado, o sistema registra um valor negativo pra "desfazer" o lançamento anterior, em vez de apagar a linha original. A decisão tomada foi manter esses valores como estão, sem filtrar — porque descartá-los sem entender o motivo inflaria artificialmente o valor total pra cima (perderíamos os cancelamentos, mas manteríamos os lançamentos originais que foram cancelados).
+
+13. O enriquecimento via BrasilAPI esbarrou num limite de requisições (rate limit) da API pública. Em vez de insistir em processar os 34.145 CNPJs em ordem arbitrária, foi feita uma análise de concentração: somando o valor de todas as contas médicas por prestador, ficou claro que poucos prestadores concentram a maior parte do dinheiro — 453 CNPJs (1,3% do total) já respondem por 80% do valor, e cerca de 3.000 cobrem mais de 95%. Esse é o Princípio de Pareto (regra 80/20) aplicado na prática: uma fração pequena da população concentra a maior parte do impacto. A decisão foi priorizar o enriquecimento desses prestadores de maior valor, chegando a 93,1% de cobertura de valor financeiro mesmo enriquecendo só 42,6% dos CNPJs em quantidade — ou seja, cobertura de dinheiro muito maior que a cobertura de contagem bruta, exatamente por causa dessa concentração.
+
